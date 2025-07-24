@@ -13,21 +13,21 @@
             background-color: #f3f4f6; /* Light gray background */
         }
 
-        /* Keyframes for the glow effect on existing cards */
+        /* Keyframes for the glow effect on existing cards (blue) */
         @keyframes glow-fade {
-            0% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.7); } /* Blue glow */
+            0% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.7); }
             50% { box-shadow: 0 0 25px rgba(59, 130, 246, 1); }
-            100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0); } /* Fade out */
+            100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0); }
         }
 
         .glow-effect {
             animation: glow-fade 1s ease-out forwards;
         }
 
-        /* Keyframes for the error glow on empty input */
+        /* Keyframes for the error glow on empty input (red) */
         @keyframes error-glow {
-            0% { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); } /* Red glow */
-            100% { border-color: #d1d5db; box-shadow: none; } /* Fade out to original */
+            0% { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); }
+            100% { border-color: #d1d5db; box-shadow: none; }
         }
 
         .error-glow {
@@ -36,24 +36,43 @@
 
         /* Keyframes for the button press feedback */
         @keyframes button-press-feedback {
-            0% { transform: scale(1); background-color: #3b82f6; } /* Original blue */
-            50% { transform: scale(0.98); background-color: #2563eb; } /* Darker blue, slightly smaller */
-            100% { transform: scale(1); background-color: #3b82f6; } /* Back to original */
+            0% { transform: scale(1); background-color: #3b82f6; }
+            50% { transform: scale(0.98); background-color: #2563eb; }
+            100% { transform: scale(1); background-color: #3b82f6; }
         }
 
         .button-feedback {
             animation: button-press-feedback 0.3s ease-out;
         }
 
-        /* Keyframes for counter going negative glow */
-        @keyframes negative-glow {
-            0% { text-shadow: 0 0 5px rgba(239, 68, 68, 0.7); color: #ef4444; } /* Light red glow */
+        /* Keyframes for counter going negative or hitting limit glow (red) */
+        @keyframes count-error-glow {
+            0% { text-shadow: 0 0 5px rgba(239, 68, 68, 0.7); color: #ef4444; }
             50% { text-shadow: 0 0 10px rgba(239, 68, 68, 1); color: #ef4444; }
-            100% { text-shadow: none; color: #1f2937; } /* Fade out to original text color (gray-900) */
+            100% { text-shadow: none; color: #1f2937; }
         }
 
-        .negative-glow {
-            animation: negative-glow 1s ease-out forwards;
+        .count-error-glow {
+            animation: count-error-glow 1s ease-out forwards;
+        }
+
+        /* For the note textarea when editing */
+        .note-textarea {
+            resize: vertical; /* Allow vertical resizing */
+            min-height: 60px; /* Minimum height for notes */
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .note-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
     </style>
 </head>
@@ -93,30 +112,63 @@
         const removeAllCardsButton = document.getElementById('removeAllCards');
         const tallyCardsContainer = document.getElementById('tallyCardsContainer');
 
-        let tallyItems = []; // Array to store tally data
+        // Array to store tally data. Each item now includes 'limit' and 'note'.
+        let tallyItems = [];
+
+        // Helper function to capitalize the first letter of a string
+        function capitalizeFirstLetter(string) {
+            if (!string) return '';
+            return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+        }
 
         // Function to render all tally cards
         function renderTallyCards() {
             tallyCardsContainer.innerHTML = ''; // Clear existing cards
-            tallyItems.forEach((item, index) => {
+            tallyItems.forEach((item) => {
                 const card = document.createElement('div');
                 card.id = `tally-card-${item.id}`; // Unique ID for each card
                 card.className = 'bg-gray-100 p-5 rounded-xl shadow-md flex flex-col space-y-4';
 
+                // Determine the limit display
+                const limitDisplay = item.limit !== null ? ` / ${item.limit}` : '';
+
                 card.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-semibold text-gray-700 truncate">${item.name}</h2>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-xl font-semibold text-gray-700 truncate" id="item-name-${item.id}">${item.name}</h2>
+                            <button data-id="${item.id}" class="rename-item-btn text-blue-500 hover:text-blue-700 focus:outline-none transition duration-200 ease-in-out text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.38-2.827-2.828z" />
+                                </svg>
+                            </button>
+                        </div>
                         <button data-id="${item.id}" class="remove-item-btn text-red-500 hover:text-red-700 focus:outline-none transition duration-200 ease-in-out">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                         </button>
                     </div>
+
+                    <!-- Upper Limit Section -->
+                    <div class="flex items-center space-x-2 text-sm text-gray-600">
+                        <span>Upper Limit:</span>
+                        <input
+                            type="number"
+                            data-id="${item.id}"
+                            value="${item.limit !== null ? item.limit : ''}"
+                            placeholder="No limit"
+                            class="limit-input w-24 px-2 py-1 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        >
+                        <button data-id="${item.id}" class="set-limit-btn px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200 ease-in-out">
+                            Set
+                        </button>
+                    </div>
+
                     <div class="flex items-center justify-center space-x-4 my-2">
                         <button data-id="${item.id}" data-action="decrement" class="tally-btn px-4 py-2 bg-yellow-400 text-gray-800 font-bold text-xl rounded-lg shadow-md hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 transition duration-200 ease-in-out">
                             -1
                         </button>
-                        <p class="text-5xl font-bold text-center text-gray-900" id="count-${item.id}">${item.count}</p>
+                        <p class="text-5xl font-bold text-center text-gray-900" id="count-${item.id}">${item.count}${limitDisplay}</p>
                         <button data-id="${item.id}" data-action="increment" class="tally-btn px-4 py-2 bg-green-500 text-white font-bold text-xl rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-200 ease-in-out">
                             +1
                         </button>
@@ -135,6 +187,27 @@
                             +10
                         </button>
                     </div>
+
+                    <!-- Note Field Section -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <h3 class="text-md font-semibold text-gray-700 mb-2">Notes:</h3>
+                        <div id="note-display-${item.id}">
+                            ${item.note ? `<p class="text-gray-800 bg-white p-3 rounded-md shadow-sm whitespace-pre-wrap">${item.note}</p>` : ''}
+                        </div>
+                        <div id="note-input-${item.id}" class="${item.note ? 'hidden' : ''} flex flex-col space-y-2">
+                            <textarea
+                                data-id="${item.id}"
+                                placeholder="Add your notes here..."
+                                class="note-textarea"
+                            >${item.note}</textarea>
+                            <button data-id="${item.id}" class="add-note-btn px-4 py-2 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                                Add Note
+                            </button>
+                        </div>
+                        <button data-id="${item.id}" class="edit-note-btn mt-2 px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition duration-200 ease-in-out ${item.note ? '' : 'hidden'}">
+                            Edit Note
+                        </button>
+                    </div>
                 `;
                 tallyCardsContainer.appendChild(card);
             });
@@ -143,6 +216,7 @@
 
         // Function to attach event listeners to dynamically created buttons
         function attachEventListeners() {
+            // Tally buttons (+1, -1, +5, -5, +10, -10)
             document.querySelectorAll('.tally-btn').forEach(button => {
                 button.onclick = (event) => {
                     const id = event.currentTarget.dataset.id;
@@ -151,10 +225,64 @@
                 };
             });
 
+            // Remove item button
             document.querySelectorAll('.remove-item-btn').forEach(button => {
                 button.onclick = (event) => {
                     const id = event.currentTarget.dataset.id;
                     removeItem(id);
+                };
+            });
+
+            // Rename item button
+            document.querySelectorAll('.rename-item-btn').forEach(button => {
+                button.onclick = (event) => {
+                    const id = event.currentTarget.dataset.id;
+                    toggleRenameMode(id);
+                };
+            });
+
+            // Set Limit button
+            document.querySelectorAll('.set-limit-btn').forEach(button => {
+                button.onclick = (event) => {
+                    const id = event.currentTarget.dataset.id;
+                    const limitInput = document.querySelector(`#tally-card-${id} .limit-input`);
+                    setTallyLimit(id, limitInput.value);
+                };
+            });
+            // Limit input Enter key listener
+            document.querySelectorAll('.limit-input').forEach(input => {
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        const id = event.currentTarget.dataset.id;
+                        setTallyLimit(id, event.currentTarget.value);
+                    }
+                });
+            });
+
+            // Add Note button
+            document.querySelectorAll('.add-note-btn').forEach(button => {
+                button.onclick = (event) => {
+                    const id = event.currentTarget.dataset.id;
+                    const noteTextarea = document.querySelector(`#tally-card-${id} .note-textarea`);
+                    saveNote(id, noteTextarea.value);
+                };
+            });
+            // Note textarea Enter key listener (for adding/saving)
+            document.querySelectorAll('.note-textarea').forEach(textarea => {
+                textarea.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) { // Allow Shift+Enter for new line
+                        event.preventDefault(); // Prevent default new line
+                        const id = event.currentTarget.dataset.id;
+                        saveNote(id, event.currentTarget.value);
+                    }
+                });
+            });
+
+            // Edit Note button
+            document.querySelectorAll('.edit-note-btn').forEach(button => {
+                button.onclick = (event) => {
+                    const id = event.currentTarget.dataset.id;
+                    toggleNoteEditMode(id);
                 };
             });
         }
@@ -167,8 +295,10 @@
                 addItemButton.classList.remove('button-feedback');
             }, 300); // Remove after 0.3 seconds
 
-            const itemName = newItemNameInput.value.trim();
+            let itemName = newItemNameInput.value.trim();
             if (itemName) {
+                itemName = capitalizeFirstLetter(itemName); // Capitalize first letter
+
                 // Check if an item with the same name already exists (case-insensitive)
                 const existingItem = tallyItems.find(item => item.name.toLowerCase() === itemName.toLowerCase());
 
@@ -190,7 +320,9 @@
                     const newItem = {
                         id: Date.now().toString(), // Simple unique ID
                         name: itemName,
-                        count: 0
+                        count: 0,
+                        limit: null, // Default no limit
+                        note: ''     // Default empty note
                     };
                     tallyItems.push(newItem);
                     renderTallyCards(); // Re-render all cards to show the new one
@@ -217,12 +349,113 @@
             }
         });
 
+        // Function to toggle rename mode for a card
+        function toggleRenameMode(id) {
+            const item = tallyItems.find(i => i.id === id);
+            if (!item) return;
+
+            const card = document.getElementById(`tally-card-${id}`);
+            const nameElement = card.querySelector(`#item-name-${id}`);
+            const renameButton = card.querySelector('.rename-item-btn');
+
+            if (nameElement.tagName === 'H2') {
+                // Switch to input mode
+                const currentName = nameElement.textContent;
+                const inputField = document.createElement('input');
+                inputField.type = 'text';
+                inputField.value = currentName;
+                inputField.className = 'px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xl font-semibold text-gray-700 w-full';
+                inputField.id = `rename-input-${id}`;
+
+                nameElement.replaceWith(inputField);
+                renameButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>`; // Check icon
+                renameButton.classList.remove('text-blue-500');
+                renameButton.classList.add('text-green-500');
+                renameButton.onclick = () => saveRename(id);
+                inputField.focus();
+                inputField.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        saveRename(id);
+                    }
+                });
+            } else {
+                // This branch should ideally not be hit if logic is sound, but as a fallback
+                saveRename(id);
+            }
+        }
+
+        // Function to save the renamed item
+        function saveRename(id) {
+            const itemIndex = tallyItems.findIndex(i => i.id === id);
+            if (itemIndex === -1) return;
+
+            const card = document.getElementById(`tally-card-${id}`);
+            const inputField = card.querySelector(`#rename-input-${id}`);
+            const renameButton = card.querySelector('.rename-item-btn');
+
+            let newName = inputField.value.trim();
+            if (newName) {
+                newName = capitalizeFirstLetter(newName); // Capitalize first letter
+
+                // Check for duplicate names (excluding the current item itself)
+                const existingItem = tallyItems.find(i => i.name.toLowerCase() === newName.toLowerCase() && i.id !== id);
+
+                if (existingItem) {
+                    inputField.classList.add('error-glow'); // Apply error glow to input
+                    setTimeout(() => {
+                        inputField.classList.remove('error-glow');
+                    }, 1000);
+                    console.log(`Cannot rename: "${newName}" already exists.`);
+                    return; // Do not save if duplicate
+                }
+
+                tallyItems[itemIndex].name = newName;
+
+                // Switch back to H2 display mode
+                const h2Element = document.createElement('h2');
+                h2Element.className = 'text-xl font-semibold text-gray-700 truncate';
+                h2Element.id = `item-name-${id}`;
+                h2Element.textContent = newName;
+                inputField.replaceWith(h2Element);
+
+                renameButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.38-2.827-2.828z" />
+                                        </svg>`; // Edit icon
+                renameButton.classList.remove('text-green-500');
+                renameButton.classList.add('text-blue-500');
+                renameButton.onclick = () => toggleRenameMode(id);
+            } else {
+                inputField.classList.add('error-glow'); // Apply error glow to input
+                setTimeout(() => {
+                    inputField.classList.remove('error-glow');
+                }, 1000);
+                console.log("Item name cannot be empty.");
+            }
+        }
+
+        // Function to set the upper limit for a tally
+        function setTallyLimit(id, value) {
+            const itemIndex = tallyItems.findIndex(item => item.id === id);
+            if (itemIndex > -1) {
+                const parsedLimit = parseInt(value, 10);
+                if (!isNaN(parsedLimit) && parsedLimit >= 0) {
+                    tallyItems[itemIndex].limit = parsedLimit;
+                } else {
+                    tallyItems[itemIndex].limit = null; // No limit if invalid input
+                }
+                renderTallyCards(); // Re-render to update limit display
+            }
+        }
+
         // Function to update a tally count
         function updateTally(id, action) {
             const itemIndex = tallyItems.findIndex(item => item.id === id);
             if (itemIndex > -1) {
                 const countElement = document.getElementById(`count-${id}`);
-                let newCount = tallyItems[itemIndex].count;
+                let currentCount = tallyItems[itemIndex].count;
+                let newCount = currentCount;
 
                 switch (action) {
                     case 'increment':
@@ -245,21 +478,72 @@
                         break;
                 }
 
+                let limitHit = false;
                 // Prevent count from going below 0
                 if (newCount < 0) {
                     newCount = 0;
+                    limitHit = true;
+                }
+
+                // Apply upper limit if set
+                if (tallyItems[itemIndex].limit !== null && newCount > tallyItems[itemIndex].limit) {
+                    newCount = tallyItems[itemIndex].limit;
+                    limitHit = true;
+                }
+
+                if (limitHit && newCount === currentCount) { // Only glow if count didn't change due to limit
                     // Apply red glow effect
-                    countElement.classList.add('negative-glow');
+                    countElement.classList.add('count-error-glow');
                     setTimeout(() => {
-                        countElement.classList.remove('negative-glow');
+                        countElement.classList.remove('count-error-glow');
                     }, 1000); // Glow for 1 second
+                } else {
+                    // Remove glow if it was there and count is changing
+                    countElement.classList.remove('count-error-glow');
                 }
 
                 tallyItems[itemIndex].count = newCount;
                 // Update the count displayed on the specific card
-                countElement.textContent = tallyItems[itemIndex].count;
+                const limitDisplay = tallyItems[itemIndex].limit !== null ? ` / ${tallyItems[itemIndex].limit}` : '';
+                countElement.textContent = tallyItems[itemIndex].count + limitDisplay;
             }
         }
+
+        // Function to save the note for a tally item
+        function saveNote(id, noteText) {
+            const itemIndex = tallyItems.findIndex(item => item.id === id);
+            if (itemIndex > -1) {
+                tallyItems[itemIndex].note = noteText.trim();
+                renderTallyCards(); // Re-render to update note display
+            }
+        }
+
+        // Function to toggle note edit mode
+        function toggleNoteEditMode(id) {
+            const item = tallyItems.find(i => i.id === id);
+            if (!item) return;
+
+            const card = document.getElementById(`tally-card-${id}`);
+            const noteDisplayDiv = card.querySelector(`#note-display-${id}`);
+            const noteInputDiv = card.querySelector(`#note-input-${id}`);
+            const editNoteBtn = card.querySelector('.edit-note-btn');
+            const noteTextarea = noteInputDiv.querySelector('.note-textarea');
+            const addNoteBtn = noteInputDiv.querySelector('.add-note-btn'); // This button now acts as save
+
+            if (noteInputDiv.classList.contains('hidden')) {
+                // Switch to edit mode
+                noteDisplayDiv.classList.add('hidden');
+                noteInputDiv.classList.remove('hidden');
+                editNoteBtn.classList.add('hidden');
+                addNoteBtn.textContent = 'Save Note'; // Change button text
+                noteTextarea.value = item.note; // Ensure textarea has current note
+                noteTextarea.focus();
+            } else {
+                // Switch to display mode (this is handled by saveNote, but good for clarity)
+                // If saveNote is called, it will re-render, effectively hiding input and showing display
+            }
+        }
+
 
         // Function to remove an individual item
         function removeItem(id) {
@@ -270,10 +554,15 @@
         // Function to remove all cards
         removeAllCardsButton.addEventListener('click', () => {
             if (tallyItems.length > 0) {
-                // You could add a custom confirmation modal here instead of a console log
-                console.log("All cards will be removed.");
-                tallyItems = []; // Clear the array
-                renderTallyCards(); // Re-render to show an empty container
+                // For a real app, you might want a custom confirmation modal here
+                const confirmClear = confirm("Are you sure you want to remove all tally cards?");
+                if (confirmClear) {
+                    tallyItems = []; // Clear the array
+                    renderTallyCards(); // Re-render to show an empty container
+                    console.log("All cards removed.");
+                }
+            } else {
+                console.log("No cards to remove.");
             }
         });
 
