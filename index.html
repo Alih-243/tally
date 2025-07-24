@@ -156,6 +156,7 @@
                             existingCard.classList.remove('glow-effect');
                         }, 1000);
                     }
+                    console.log(`Item "${itemName}" already exists. Scrolling to existing entry.`);
                 } else {
                     // If item does not exist, add it
                     const newItem = {
@@ -174,6 +175,7 @@
                 setTimeout(() => {
                     newItemNameInput.classList.remove('error-glow');
                 }, 1000);
+                console.log("Please enter an item name.");
             }
         }
 
@@ -224,7 +226,9 @@
 
         // Function to remove all cards
         removeAllCardsButton.addEventListener('click', () => {
-            if (tallyItems.length > 0)
+            if (tallyItems.length > 0) {
+                // You could add a custom confirmation modal here instead of a console log
+                console.log("All cards will be removed.");
                 tallyItems = []; // Clear the array
                 renderTallyCards(); // Re-render to show an empty container
             }
