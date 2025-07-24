@@ -44,6 +44,17 @@
         .button-feedback {
             animation: button-press-feedback 0.3s ease-out;
         }
+
+        /* Keyframes for counter going negative glow */
+        @keyframes negative-glow {
+            0% { text-shadow: 0 0 5px rgba(239, 68, 68, 0.7); color: #ef4444; } /* Light red glow */
+            50% { text-shadow: 0 0 10px rgba(239, 68, 68, 1); color: #ef4444; }
+            100% { text-shadow: none; color: #1f2937; } /* Fade out to original text color (gray-900) */
+        }
+
+        .negative-glow {
+            animation: negative-glow 1s ease-out forwards;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
@@ -210,28 +221,43 @@
         function updateTally(id, action) {
             const itemIndex = tallyItems.findIndex(item => item.id === id);
             if (itemIndex > -1) {
+                const countElement = document.getElementById(`count-${id}`);
+                let newCount = tallyItems[itemIndex].count;
+
                 switch (action) {
                     case 'increment':
-                        tallyItems[itemIndex].count++;
+                        newCount++;
                         break;
                     case 'decrement':
-                        tallyItems[itemIndex].count--;
+                        newCount--;
                         break;
                     case 'add5':
-                        tallyItems[itemIndex].count += 5;
+                        newCount += 5;
                         break;
                     case 'subtract5':
-                        tallyItems[itemIndex].count -= 5;
+                        newCount -= 5;
                         break;
                     case 'add10':
-                        tallyItems[itemIndex].count += 10;
+                        newCount += 10;
                         break;
                     case 'subtract10':
-                        tallyItems[itemIndex].count -= 10;
+                        newCount -= 10;
                         break;
                 }
-                // Update the count displayed on the specific card without re-rendering all
-                document.getElementById(`count-${id}`).textContent = tallyItems[itemIndex].count;
+
+                // Prevent count from going below 0
+                if (newCount < 0) {
+                    newCount = 0;
+                    // Apply red glow effect
+                    countElement.classList.add('negative-glow');
+                    setTimeout(() => {
+                        countElement.classList.remove('negative-glow');
+                    }, 1000); // Glow for 1 second
+                }
+
+                tallyItems[itemIndex].count = newCount;
+                // Update the count displayed on the specific card
+                countElement.textContent = tallyItems[itemIndex].count;
             }
         }
 
