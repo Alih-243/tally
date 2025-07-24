@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Tally Counter</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for a clean look */
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+
+        /* Keyframes for the glow effect on existing cards */
+        @keyframes glow-fade {
+            0% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.7); } /* Blue glow */
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 1); }
+            100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0); } /* Fade out */
+        }
+
+        .glow-effect {
+            animation: glow-fade 1s ease-out forwards;
+        }
+
+        /* Keyframes for the error glow on empty input */
+        @keyframes error-glow {
+            0% { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); } /* Red glow */
+            100% { border-color: #d1d5db; box-shadow: none; } /* Fade out to original */
+        }
+
+        .error-glow {
+            animation: error-glow 1s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
+    <div class="w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg">
+        <!-- Header and Global Controls -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
+            <h1 class="text-3xl font-bold text-gray-800">Tally Counter</h1>
+            <button id="removeAllCards" class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                Remove All Cards
+            </button>
+        </div>
+
+        <!-- Add New Tally Item Section -->
+        <div class="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
+            <input
+                type="text"
+                id="newItemName"
+                placeholder="Enter item name"
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+            >
+            <button id="addItem" class="px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-200 ease-in-out w-full sm:w-auto">
+                Add Item
+            </button>
+        </div>
+
+        <!-- Tally Cards Container -->
+        <div id="tallyCardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Tally cards will be dynamically added here -->
+        </div>
+    </div>
+
+    <script>
+        // Get references to DOM elements
+        const newItemNameInput = document.getElementById('newItemName');
+        const addItemButton = document.getElementById('addItem');
+        const removeAllCardsButton = document.getElementById('removeAllCards');
+        const tallyCardsContainer = document.getElementById('tallyCardsContainer');
+
+        let tallyItems = []; // Array to store tally data
+
+        // Function to render all tally cards
+        function renderTallyCards() {
+            tallyCardsContainer.innerHTML = ''; // Clear existing cards
+            tallyItems.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.id = `tally-card-${item.id}`; // Unique ID for each card
+                card.className = 'bg-gray-100 p-5 rounded-xl shadow-md flex flex-col space-y-4';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-semibold text-gray-700 truncate">${item.name}</h2>
+                        <button data-id="${item.id}" class="remove-item-btn text-red-500 hover:text-red-700 focus:outline-none transition duration-200 ease-in-out">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-center space-x-4 my-2">
+                        <button data-id="${item.id}" data-action="decrement" class="tally-btn px-4 py-2 bg-yellow-400 text-gray-800 font-bold text-xl rounded-lg shadow-md hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                            -1
+                        </button>
+                        <p class="text-5xl font-bold text-center text-gray-900" id="count-${item.id}">${item.count}</p>
+                        <button data-id="${item.id}" data-action="increment" class="tally-btn px-4 py-2 bg-green-500 text-white font-bold text-xl rounded-lg shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                            +1
+                        </button>
+                    </div>
+                    <div class="flex justify-center space-x-2 mt-4">
+                        <button data-id="${item.id}" data-action="subtract10" class="tally-btn px-4 py-2 bg-red-400 text-white font-bold rounded-lg shadow-md hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                            -10
+                        </button>
+                        <button data-id="${item.id}" data-action="subtract5" class="tally-btn px-4 py-2 bg-red-300 text-white font-bold rounded-lg shadow-md hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                            -5
+                        </button>
+                        <button data-id="${item.id}" data-action="add5" class="tally-btn px-4 py-2 bg-green-300 text-white font-bold rounded-lg shadow-md hover:bg-green-400 focus:outline-none focus:ring-2 focus:ring-green-300 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                            +5
+                        </button>
+                        <button data-id="${item.id}" data-action="add10" class="tally-btn px-4 py-2 bg-green-400 text-white font-bold rounded-lg shadow-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 transition duration-200 ease-in-out">
+                            +10
+                        </button>
+                    </div>
+                `;
+                tallyCardsContainer.appendChild(card);
+            });
+            attachEventListeners(); // Re-attach event listeners after rendering
+        }
+
+        // Function to attach event listeners to dynamically created buttons
+        function attachEventListeners() {
+            document.querySelectorAll('.tally-btn').forEach(button => {
+                button.onclick = (event) => {
+                    const id = event.currentTarget.dataset.id;
+                    const action = event.currentTarget.dataset.action;
+                    updateTally(id, action);
+                };
+            });
+
+            document.querySelectorAll('.remove-item-btn').forEach(button => {
+                button.onclick = (event) => {
+                    const id = event.currentTarget.dataset.id;
+                    removeItem(id);
+                };
+            });
+        }
+
+        // Function to handle adding a new tally item
+        function handleAddItem() {
+            const itemName = newItemNameInput.value.trim();
+            if (itemName) {
+                // Check if an item with the same name already exists (case-insensitive)
+                const existingItem = tallyItems.find(item => item.name.toLowerCase() === itemName.toLowerCase());
+
+                if (existingItem) {
+                    // If item exists, scroll to it and apply glow effect
+                    const existingCard = document.getElementById(`tally-card-${existingItem.id}`);
+                    if (existingCard) {
+                        existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Add glow effect
+                        existingCard.classList.add('glow-effect');
+                        // Remove glow effect after 1 second
+                        setTimeout(() => {
+                            existingCard.classList.remove('glow-effect');
+                        }, 1000);
+                    }
+                } else {
+                    // If item does not exist, add it
+                    const newItem = {
+                        id: Date.now().toString(), // Simple unique ID
+                        name: itemName,
+                        count: 0
+                    };
+                    tallyItems.push(newItem);
+                    renderTallyCards(); // Re-render all cards to show the new one
+                }
+                newItemNameInput.value = ''; // Clear input field in both cases
+                newItemNameInput.classList.remove('error-glow'); // Remove error glow if present
+            } else {
+                // If input is empty, apply error glow
+                newItemNameInput.classList.add('error-glow');
+                setTimeout(() => {
+                    newItemNameInput.classList.remove('error-glow');
+                }, 1000);
+            }
+        }
+
+        // Add event listener for the "Add Item" button click
+        addItemButton.addEventListener('click', handleAddItem);
+
+        // Add event listener for "Enter" key press in the input field
+        newItemNameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handleAddItem();
+            }
+        });
+
+        // Function to update a tally count
+        function updateTally(id, action) {
+            const itemIndex = tallyItems.findIndex(item => item.id === id);
+            if (itemIndex > -1) {
+                switch (action) {
+                    case 'increment':
+                        tallyItems[itemIndex].count++;
+                        break;
+                    case 'decrement':
+                        tallyItems[itemIndex].count--;
+                        break;
+                    case 'add5':
+                        tallyItems[itemIndex].count += 5;
+                        break;
+                    case 'subtract5':
+                        tallyItems[itemIndex].count -= 5;
+                        break;
+                    case 'add10':
+                        tallyItems[itemIndex].count += 10;
+                        break;
+                    case 'subtract10':
+                        tallyItems[itemIndex].count -= 10;
+                        break;
+                }
+                // Update the count displayed on the specific card without re-rendering all
+                document.getElementById(`count-${id}`).textContent = tallyItems[itemIndex].count;
+            }
+        }
+
+        // Function to remove an individual item
+        function removeItem(id) {
+            tallyItems = tallyItems.filter(item => item.id !== id);
+            renderTallyCards(); // Re-render all cards
+        }
+
+        // Function to remove all cards
+        removeAllCardsButton.addEventListener('click', () => {
+            if (tallyItems.length > 0)
+                tallyItems = []; // Clear the array
+                renderTallyCards(); // Re-render to show an empty container
+            }
+        });
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', renderTallyCards);
+    </script>
+</body>
+</html>
