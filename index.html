@@ -33,6 +33,17 @@
         .error-glow {
             animation: error-glow 1s ease-out forwards;
         }
+
+        /* Keyframes for the button press feedback */
+        @keyframes button-press-feedback {
+            0% { transform: scale(1); background-color: #3b82f6; } /* Original blue */
+            50% { transform: scale(0.98); background-color: #2563eb; } /* Darker blue, slightly smaller */
+            100% { transform: scale(1); background-color: #3b82f6; } /* Back to original */
+        }
+
+        .button-feedback {
+            animation: button-press-feedback 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8">
@@ -139,6 +150,12 @@
 
         // Function to handle adding a new tally item
         function handleAddItem() {
+            // Add temporary feedback to the button
+            addItemButton.classList.add('button-feedback');
+            setTimeout(() => {
+                addItemButton.classList.remove('button-feedback');
+            }, 300); // Remove after 0.3 seconds
+
             const itemName = newItemNameInput.value.trim();
             if (itemName) {
                 // Check if an item with the same name already exists (case-insensitive)
